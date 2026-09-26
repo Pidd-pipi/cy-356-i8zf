@@ -109,7 +109,8 @@ async function onComment(d: DiaryEntry) {
 async function openCreate() {
   createVisible.value = true
   try {
-    const data = await listPlans({ page: 1, page_size: 100 })
+    // scope=writable：本人认养地块的计划 + 本人作为共管人地块的计划
+    const data = await listPlans({ page: 1, page_size: 100, scope: 'writable' })
     myPlans.value = data.list.map((p) => ({ id: p.id, crop_name: p.crop_name, plot_name: p.plot_name }))
   } catch {
     myPlans.value = []

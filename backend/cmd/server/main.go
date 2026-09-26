@@ -55,6 +55,7 @@ func main() {
 	// 仓储
 	userRepo := repository.NewUserRepository(db)
 	plotRepo := repository.NewPlotRepository(db)
+	caretakerRepo := repository.NewPlotCaretakerRepository(db)
 	planRepo := repository.NewPlantingPlanRepository(db)
 	harvestRepo := repository.NewHarvestRecordRepository(db)
 	diaryRepo := repository.NewDiaryRepository(db)
@@ -66,9 +67,12 @@ func main() {
 	userService := service.NewUserService(userRepo, logger)
 	plotService := service.NewPlotService(plotRepo, db, logger)
 	auditService := service.NewAuditService(auditRepo, logger)
+	caretakerService := service.NewPlotCaretakerService(caretakerRepo, userRepo, plotService, db, logger)
+	// 释放地块时在同一事务内终止全部共管关系（回调注入避免 service 间循环依赖）
+	plotService.SetCaretakerReleaser(caretakerService.EndOpenByPlot)
 	planService := service.NewPlantingPlanService(planRepo, plotRepo, plotService, db, logger)
 	harvestService := service.NewHarvestRecordService(harvestRepo, planRepo, db, logger)
-	diaryService := service.NewDiaryService(diaryRepo, planRepo, logger)
+	diaryService := service.NewDiaryService(diaryRepo, planRepo, caretakerRepo, logger)
 	communityService := service.NewCommunityService(postRepo, logger)
 	statsService := service.NewStatsService(userRepo, plotRepo, planRepo, harvestRepo, diaryRepo, postRepo, logger)
 
@@ -76,6 +80,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(userService, auditService)
 	plotHandler := handler.NewPlotHandler(plotService, auditService)
+	caretakerHandler := handler.NewPlotCaretakerHandler(caretakerService, auditService)
 	planHandler := handler.NewPlantingPlanHandler(planService, harvestService)
 	harvestHandler := handler.NewHarvestHandler(harvestService, auditService)
 	diaryHandler := handler.NewDiaryHandler(diaryService)
@@ -87,7 +92,7 @@ func main() {
 
 	appRouter := router.New(
 		cfg, logger, rdb,
-		authHandler, userHandler, plotHandler, planHandler, harvestHandler,
+		authHandler, userHandler, plotHandler, caretakerHandler, planHandler, harvestHandler,
 		diaryHandler, communityHandler, auditHandler, statsHandler,
 		auditService, hub,
 	)

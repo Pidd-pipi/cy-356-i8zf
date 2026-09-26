@@ -188,6 +188,20 @@ func PostStatusText(s string) string {
 	}
 }
 
+// CaretakerStatusText 地块共管状态中文文本。
+func CaretakerStatusText(s string) string {
+	switch constants.CaretakerStatus(s) {
+	case constants.CaretakerInvited:
+		return "待接受"
+	case constants.CaretakerActive:
+		return "共管中"
+	case constants.CaretakerEnded:
+		return "已移除"
+	default:
+		return "未知状态"
+	}
+}
+
 // WeightKgText 重量文本（kg 保留 2 位小数）。
 func WeightKgText(w float64) string {
 	return fmt.Sprintf("%.2f kg", w)

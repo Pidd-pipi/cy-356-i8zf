@@ -14,6 +14,13 @@ export const PlotStatusMeta: Record<string, { label: string; type: 'success' | '
   harvested: { label: '待释放', type: 'info' }
 }
 
+export type CaretakerStatus = 'invited' | 'active' | 'ended'
+export const CaretakerStatusMeta: Record<string, { label: string; type: 'success' | 'warning' | 'info' | 'danger' | 'primary' }> = {
+  invited: { label: '待接受', type: 'warning' },
+  active: { label: '共管中', type: 'success' },
+  ended: { label: '已移除', type: 'info' }
+}
+
 export type PlanStatus = 'planned' | 'planting' | 'growing' | 'harvesting' | 'completed'
 export const PlanStatusMeta: Record<string, { label: string; type: 'success' | 'warning' | 'info' | 'danger' | 'primary' }> = {
   planned: { label: '已计划', type: 'info' },

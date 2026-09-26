@@ -47,6 +47,26 @@ CREATE TABLE IF NOT EXISTS planting_plans (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 地块共管：invited（待接受）/ active（共管中）/ ended（已移除）。
+-- 一个地块至多保留一条非终态记录，部分唯一索引在数据库层兜底并发邀请。
+CREATE TABLE IF NOT EXISTS plot_caretakers (
+    id BIGSERIAL PRIMARY KEY,
+    plot_id BIGINT NOT NULL REFERENCES plots(id),
+    caretaker_id BIGINT NOT NULL REFERENCES users(id),
+    inviter_id BIGINT NOT NULL REFERENCES users(id),
+    status VARCHAR(32) NOT NULL DEFAULT 'invited',
+    invited_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    accepted_at TIMESTAMPTZ,
+    removed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uni_plot_caretakers_open
+    ON plot_caretakers(plot_id) WHERE status IN ('invited', 'active');
+CREATE INDEX IF NOT EXISTS idx_plot_caretakers_caretaker ON plot_caretakers(caretaker_id);
+CREATE INDEX IF NOT EXISTS idx_plot_caretakers_status ON plot_caretakers(status);
+
 CREATE TABLE IF NOT EXISTS harvest_records (
     id BIGSERIAL PRIMARY KEY,
     plan_id BIGINT NOT NULL REFERENCES planting_plans(id),

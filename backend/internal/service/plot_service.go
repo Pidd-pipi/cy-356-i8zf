@@ -19,11 +19,30 @@ type PlotService struct {
 	plotRepo repository.PlotRepository
 	db       *gorm.DB
 	logger   *slog.Logger
+	// onReleaseCaretakers 地块释放事务内终止全部共管关系（由 PlotCaretakerService 注入，避免循环依赖）。
+	onReleaseCaretakers func(tx *gorm.DB, plotID uint) error
 }
 
 // NewPlotService 构造地块服务。
 func NewPlotService(plotRepo repository.PlotRepository, db *gorm.DB, logger *slog.Logger) *PlotService {
 	return &PlotService{plotRepo: plotRepo, db: db, logger: logger}
+}
+
+// SetCaretakerReleaser 注入释放地块时的共管关系终止回调。
+func (s *PlotService) SetCaretakerReleaser(fn func(tx *gorm.DB, plotID uint) error) {
+	s.onReleaseCaretakers = fn
+}
+
+// getByIDForUpdate 事务内行锁查询地块（被共管服务复用）。
+func (s *PlotService) getByIDForUpdate(tx *gorm.DB, id uint) (*model.Plot, error) {
+	plot, err := s.plotRepo.FindByIDForUpdate(tx, id)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return nil, util.NewAppError(constants.CodeNotFound, 404, fmt.Sprintf("地块实体 id=%d 不存在", id))
+		}
+		return nil, util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
+	}
+	return plot, nil
 }
 
 // GetByID 查询地块详情（被地块 handler 与种植计划 service 复用）。
@@ -159,6 +178,12 @@ func (s *PlotService) Release(plotID, operatorID uint, operatorRole string) (*mo
 		plot.AdopterID = nil
 		if err := s.plotRepo.UpdateWithTx(tx, plot); err != nil {
 			return util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
+		}
+		// 释放后共管关系一并终止：原共管人无法再写新日记，历史日记保留。
+		if s.onReleaseCaretakers != nil {
+			if err := s.onReleaseCaretakers(tx, plotID); err != nil {
+				return util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
+			}
 		}
 		released = plot
 		return nil

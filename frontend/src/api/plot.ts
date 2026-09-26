@@ -1,5 +1,6 @@
 import { get, post } from '@/utils/request'
 import type { UserInfo } from './auth'
+import type { PlotCaretaker } from './plotCaretaker'
 
 export interface Plot {
   id: number
@@ -13,6 +14,7 @@ export interface Plot {
   status: string
   adopter_id: number | null
   adopter: UserInfo | null
+  caretaker: PlotCaretaker | null
   description: string
   created_at: string
 }

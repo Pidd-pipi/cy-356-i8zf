@@ -17,6 +17,7 @@ type PlantingPlanRepository interface {
 	UpdateWithTx(tx *gorm.DB, p *model.PlantingPlan) error
 	FindByID(id uint) (*model.PlantingPlan, error)
 	List(pq util.PageQuery, userID uint, status string) ([]model.PlantingPlan, int64, error)
+	ListWritable(pq util.PageQuery, userID uint, status string) ([]model.PlantingPlan, int64, error)
 	ListByUser(userID uint, pq util.PageQuery) ([]model.PlantingPlan, int64, error)
 	CountByUser(userID uint) (int64, error)
 	CountByStatus() (map[string]int64, error)
@@ -83,6 +84,27 @@ func (r *plantingPlanRepository) List(pq util.PageQuery, userID uint, status str
 // ListByUser 按用户分页列表（与 harvest 列表复用同一仓储方法族）。
 func (r *plantingPlanRepository) ListByUser(userID uint, pq util.PageQuery) ([]model.PlantingPlan, int64, error) {
 	return r.List(pq, userID, "")
+}
+
+// ListWritable 可写日记的计划：本人认养地块的计划 + 本人为 active 共管人的地块计划。
+func (r *plantingPlanRepository) ListWritable(pq util.PageQuery, userID uint, status string) ([]model.PlantingPlan, int64, error) {
+	var plans []model.PlantingPlan
+	var total int64
+	coPlotSub := r.db.Model(&model.PlotCaretaker{}).
+		Select("plot_id").
+		Where("caretaker_id = ? AND status = ?", userID, "active")
+	q := r.db.Model(&model.PlantingPlan{}).Preload("Plot").Preload("User").
+		Where("user_id = ? OR plot_id IN (?)", userID, coPlotSub)
+	if status != "" {
+		q = q.Where("status = ?", status)
+	}
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := util.Paginate(q.Order("id DESC"), pq).Find(&plans).Error; err != nil {
+		return nil, 0, err
+	}
+	return plans, total, nil
 }
 
 func (r *plantingPlanRepository) CountByUser(userID uint) (int64, error) {

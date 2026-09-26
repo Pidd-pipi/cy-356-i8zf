@@ -38,11 +38,12 @@ type PlotOutDTO struct {
 	Sunlight    string      `json:"sunlight"`
 	Latitude    float64     `json:"latitude"`
 	Longitude   float64     `json:"longitude"`
-	Status      string      `json:"status"`
-	AdopterID   *uint       `json:"adopter_id"`
-	Adopter     *UserOutDTO `json:"adopter"`
-	Description string      `json:"description"`
-	CreatedAt   string      `json:"created_at"`
+	Status      string              `json:"status"`
+	AdopterID   *uint               `json:"adopter_id"`
+	Adopter     *UserOutDTO         `json:"adopter"`
+	Caretaker   *PlotCaretakerOutDTO `json:"caretaker"`
+	Description string              `json:"description"`
+	CreatedAt   string              `json:"created_at"`
 }
 
 // ToPlotOutDTO 模型转 DTO。
@@ -63,6 +64,9 @@ func ToPlotOutDTO(p *model.Plot) *PlotOutDTO {
 	}
 	if p.Adopter != nil {
 		dto.Adopter = ToUserOutDTO(p.Adopter)
+	}
+	if p.Caretaker != nil {
+		dto.Caretaker = ToPlotCaretakerOutDTO(p.Caretaker)
 	}
 	return dto
 }

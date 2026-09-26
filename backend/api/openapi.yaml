@@ -54,6 +54,26 @@ paths:
       tags: [plots]
       summary: 释放地块
       responses: { '200': { description: 成功 } }
+  /plots/{id}/caretaker/invite:
+    post:
+      tags: [plots]
+      summary: 认养人邀请一位注册用户共管地块
+      responses: { '200': { description: 成功 } }
+  /plots/{id}/caretaker/accept:
+    post:
+      tags: [plots]
+      summary: 受邀人接受地块共管邀请
+      responses: { '200': { description: 成功 } }
+  /plots/{id}/caretaker:
+    delete:
+      tags: [plots]
+      summary: 认养人移除共管人（或撤销待接受邀请）
+      responses: { '200': { description: 成功 } }
+  /caretaker/invitations:
+    get:
+      tags: [plots]
+      summary: 当前用户收到的待接受共管邀请
+      responses: { '200': { description: 成功 } }
   /planting-plans:
     get:
       tags: [planting-plans]

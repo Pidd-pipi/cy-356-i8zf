@@ -77,12 +77,8 @@ func (h *DiaryHandler) Delete(c *gin.Context) {
 func (h *DiaryHandler) List(c *gin.Context) {
 	pq := util.ParsePageQuery(c)
 	claims, _ := util.GetClaims(c)
-	var userID uint
-	if claims.Role != string(constants.RoleAdmin) {
-		userID = claims.UserID
-	}
 	planID, _ := strconv.ParseUint(c.Query("plan_id"), 10, 64)
-	diaries, total, err := h.diaryService.List(pq, userID, uint(planID))
+	diaries, total, err := h.diaryService.List(pq, claims.UserID, claims.Role == string(constants.RoleAdmin), uint(planID))
 	if err != nil {
 		util.FailWithAppError(c, err)
 		return

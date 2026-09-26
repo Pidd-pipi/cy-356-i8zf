@@ -11,7 +11,8 @@ func TestDiaryService_CreateLikeComment(t *testing.T) {
 	db := newTestServiceDB(t)
 	diaryRepo := repository.NewDiaryRepository(db)
 	planRepo := repository.NewPlantingPlanRepository(db)
-	svc := NewDiaryService(diaryRepo, planRepo, testLogger())
+	caretakerRepo := repository.NewPlotCaretakerRepository(db)
+	svc := NewDiaryService(diaryRepo, planRepo, caretakerRepo, testLogger())
 
 	user := newTestUser(t, db, "farmer", "farmer")
 	plot := newTestPlot(t, db, "P-DIARY", "available", nil)

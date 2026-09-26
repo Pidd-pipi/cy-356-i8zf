@@ -169,9 +169,23 @@ func (s *PlantingPlanService) ChangeStatus(id, userID uint, role, target string)
 	return plan, nil
 }
 
-// List 分页查询种植计划（按用户过滤）。
-func (s *PlantingPlanService) List(pq util.PageQuery, userID uint, status string) ([]model.PlantingPlan, int64, error) {
-	plans, total, err := s.planRepo.List(pq, userID, status)
+// List 分页查询种植计划。
+// scope=writable 时返回本人认养地块计划 + 本人 active 共管地块的计划（写日记选计划复用）；
+// 管理员传 userID=0 查看全部；默认仅返回本人创建的计划。
+func (s *PlantingPlanService) List(pq util.PageQuery, userID uint, isAdmin bool, status, scope string) ([]model.PlantingPlan, int64, error) {
+	var (
+		plans []model.PlantingPlan
+		total int64
+		err   error
+	)
+	switch {
+	case isAdmin:
+		plans, total, err = s.planRepo.List(pq, 0, status)
+	case scope == "writable":
+		plans, total, err = s.planRepo.ListWritable(pq, userID, status)
+	default:
+		plans, total, err = s.planRepo.List(pq, userID, status)
+	}
 	if err != nil {
 		return nil, 0, util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
 	}

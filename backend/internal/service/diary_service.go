@@ -14,17 +14,34 @@ import (
 
 // DiaryService 种植日记服务。
 type DiaryService struct {
-	diaryRepo repository.DiaryRepository
-	planRepo  repository.PlantingPlanRepository
-	logger    *slog.Logger
+	diaryRepo      repository.DiaryRepository
+	planRepo       repository.PlantingPlanRepository
+	caretakerRepo  repository.PlotCaretakerRepository
+	logger         *slog.Logger
 }
 
 // NewDiaryService 构造种植日记服务。
-func NewDiaryService(diaryRepo repository.DiaryRepository, planRepo repository.PlantingPlanRepository, logger *slog.Logger) *DiaryService {
-	return &DiaryService{diaryRepo: diaryRepo, planRepo: planRepo, logger: logger}
+func NewDiaryService(diaryRepo repository.DiaryRepository, planRepo repository.PlantingPlanRepository, caretakerRepo repository.PlotCaretakerRepository, logger *slog.Logger) *DiaryService {
+	return &DiaryService{diaryRepo: diaryRepo, planRepo: planRepo, caretakerRepo: caretakerRepo, logger: logger}
 }
 
-// Create 发布种植日记（校验计划归属）。
+// canWriteDiary 计划认养人本人，或该地块处于 active 的共管人，可写日记。
+// 共管人被移除（invited/ended）后立即失去写权限；历史日记不受影响。
+func (s *DiaryService) canWriteDiary(plan *model.PlantingPlan, userID uint) (bool, error) {
+	if plan.UserID == userID {
+		return true, nil
+	}
+	c, err := s.caretakerRepo.FindActiveByPlot(plan.PlotID)
+	if err != nil {
+		if errors.Is(err, repository.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return c.CaretakerID == userID, nil
+}
+
+// Create 发布种植日记（校验计划归属：认养人本人或地块 active 共管人）。
 func (s *DiaryService) Create(req *dto.CreateDiaryRequest, userID uint) (*model.DiaryEntry, error) {
 	plan, err := s.planRepo.FindByID(req.PlanID)
 	if err != nil {
@@ -33,8 +50,12 @@ func (s *DiaryService) Create(req *dto.CreateDiaryRequest, userID uint) (*model.
 		}
 		return nil, util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
 	}
-	if plan.UserID != userID {
-		return nil, util.NewAppError(constants.CodeForbidden, 403, fmt.Sprintf("用户 id=%d 无权为他人种植计划 id=%d 写日记", userID, req.PlanID))
+	allowed, err := s.canWriteDiary(plan, userID)
+	if err != nil {
+		return nil, util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
+	}
+	if !allowed {
+		return nil, util.NewAppError(constants.CodeForbidden, 403, fmt.Sprintf("用户 id=%d 无权为种植计划 id=%d 写日记：需为地块认养人或其共管人", userID, req.PlanID))
 	}
 	d := &model.DiaryEntry{
 		PlanID:     req.PlanID,
@@ -99,9 +120,18 @@ func (s *DiaryService) Delete(id, userID uint, role string) error {
 	return nil
 }
 
-// List 分页查询种植日记。
-func (s *DiaryService) List(pq util.PageQuery, userID, planID uint) ([]model.DiaryEntry, int64, error) {
-	diaries, total, err := s.diaryRepo.List(pq, userID, planID)
+// List 分页查询种植日记（非管理员：本人日记 + 共管地块日记；管理员：全部）。
+func (s *DiaryService) List(pq util.PageQuery, viewerID uint, isAdmin bool, planID uint) ([]model.DiaryEntry, int64, error) {
+	var (
+		diaries []model.DiaryEntry
+		total    int64
+		err      error
+	)
+	if isAdmin {
+		diaries, total, err = s.diaryRepo.List(pq, 0, planID)
+	} else {
+		diaries, total, err = s.diaryRepo.ListVisible(pq, viewerID, planID)
+	}
 	if err != nil {
 		return nil, 0, util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
 	}

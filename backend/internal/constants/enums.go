@@ -118,6 +118,15 @@ const (
 	PostStatusRemoved   PostStatus = "removed"
 )
 
+// CaretakerStatus 地块共管状态机：invited（已邀请待接受）-> active（共管中）-> ended（已移除/随释放终止）
+type CaretakerStatus string
+
+const (
+	CaretakerInvited CaretakerStatus = "invited" // 已邀请，待对方接受
+	CaretakerActive  CaretakerStatus = "active"  // 已接受，共管中
+	CaretakerEnded   CaretakerStatus = "ended"   // 已移除（保留历史）
+)
+
 // 季节推荐作物表（静态推荐数据，服务层读取）
 var SeasonCrops = map[Season][]string{
 	SeasonSpring: {"菠菜", "生菜", "豌豆", "草莓", "香葱", "萝卜"},

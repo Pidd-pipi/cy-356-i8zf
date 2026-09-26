@@ -16,6 +16,7 @@ type DiaryRepository interface {
 	Delete(id uint) error
 	FindByID(id uint) (*model.DiaryEntry, error)
 	List(pq util.PageQuery, userID, planID uint) ([]model.DiaryEntry, int64, error)
+	ListVisible(pq util.PageQuery, viewerID, planID uint) ([]model.DiaryEntry, int64, error)
 	IncrementLike(id uint) error
 	CreateComment(c *model.DiaryComment) error
 	ListComments(diaryID uint) ([]model.DiaryComment, error)
@@ -61,6 +62,33 @@ func (r *diaryRepository) List(pq util.PageQuery, userID, planID uint) ([]model.
 	if userID > 0 {
 		q = q.Where("user_id = ?", userID)
 	}
+	if planID > 0 {
+		q = q.Where("plan_id = ?", planID)
+	}
+	if err := q.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := util.Paginate(q.Order("id DESC"), pq).Find(&diaries).Error; err != nil {
+		return nil, 0, err
+	}
+	return diaries, total, nil
+}
+
+// ListVisible 非管理员可见日记：本人写的 + 本人作为 active 共管人地块下的全部日记。
+// 共管关系终止后，历史日记仍随地块可见（共管人本人也仍能看到自己写过的内容）。
+func (r *diaryRepository) ListVisible(pq util.PageQuery, viewerID, planID uint) ([]model.DiaryEntry, int64, error) {
+	var diaries []model.DiaryEntry
+	var total int64
+	// 本人当前共管中的地块
+	coPlotSub := r.db.Model(&model.PlotCaretaker{}).
+		Select("plot_id").
+		Where("caretaker_id = ? AND status = ?", viewerID, "active")
+	// 可见计划：本人拥有的，或落在本人共管地块上的
+	planSub := r.db.Model(&model.PlantingPlan{}).
+		Select("id").
+		Where("user_id = ? OR plot_id IN (?)", viewerID, coPlotSub)
+	q := r.db.Model(&model.DiaryEntry{}).Preload("Plan").Preload("User").
+		Where("user_id = ? OR plan_id IN (?)", viewerID, planSub)
 	if planID > 0 {
 		q = q.Where("plan_id = ?", planID)
 	}

@@ -19,6 +19,7 @@ type UserRepository interface {
 	Delete(id uint) error
 	FindByID(id uint) (*model.User, error)
 	FindByUsername(username string) (*model.User, error)
+	FindByUsernameWithTx(tx *gorm.DB, username string) (*model.User, error)
 	List(pq util.PageQuery, role, status string) ([]model.User, int64, error)
 	CountByRole() (map[string]int64, error)
 }
@@ -58,6 +59,18 @@ func (r *userRepository) FindByID(id uint) (*model.User, error) {
 func (r *userRepository) FindByUsername(username string) (*model.User, error) {
 	var u model.User
 	if err := r.db.Where("username = ?", username).First(&u).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &u, nil
+}
+
+// FindByUsernameWithTx 在指定事务内按用户名查询（供事务内调用，避免连接池嵌套死锁）。
+func (r *userRepository) FindByUsernameWithTx(tx *gorm.DB, username string) (*model.User, error) {
+	var u model.User
+	if err := tx.Where("username = ?", username).First(&u).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrNotFound
 		}

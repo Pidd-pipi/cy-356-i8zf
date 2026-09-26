@@ -15,6 +15,8 @@ type Plot struct {
 	Status      string    `gorm:"size:32;not null;default:available;index" json:"status"`
 	AdopterID   *uint     `gorm:"index" json:"adopter_id"`
 	Adopter     *User     `gorm:"foreignKey:AdopterID" json:"adopter"`
+	// Caretaker 当前共管记录（invited/active 至多一条），由仓储组装，不映射数据库列。
+	Caretaker   *PlotCaretaker `gorm:"-" json:"caretaker"`
 	Description string    `gorm:"size:512" json:"description"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`

@@ -64,12 +64,9 @@ func (h *PlantingPlanHandler) Update(c *gin.Context) {
 func (h *PlantingPlanHandler) List(c *gin.Context) {
 	pq := util.ParsePageQuery(c)
 	claims, _ := util.GetClaims(c)
-	var userID uint
-	if claims.Role != string(constants.RoleAdmin) {
-		userID = claims.UserID
-	}
 	status := c.Query("status")
-	plans, total, err := h.planService.List(pq, userID, status)
+	scope := c.Query("scope")
+	plans, total, err := h.planService.List(pq, claims.UserID, claims.Role == string(constants.RoleAdmin), status, scope)
 	if err != nil {
 		util.FailWithAppError(c, err)
 		return
