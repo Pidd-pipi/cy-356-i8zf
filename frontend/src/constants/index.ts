@@ -14,6 +14,14 @@ export const PlotStatusMeta: Record<string, { label: string; type: 'success' | '
   harvested: { label: '待释放', type: 'info' }
 }
 
+// 地块共管邀请状态（与后端 CustodianStatus 对应，驱动地块列表“共管”列徽标与按钮显隐）
+export type CustodianStatus = 'pending' | 'accepted' | 'removed'
+export const CustodianStatusMeta: Record<string, { label: string; type: 'success' | 'warning' | 'info' | 'danger' | 'primary' }> = {
+  pending: { label: '待接受', type: 'warning' },
+  accepted: { label: '共管中', type: 'success' },
+  removed: { label: '已移除', type: 'info' }
+}
+
 export type PlanStatus = 'planned' | 'planting' | 'growing' | 'harvesting' | 'completed'
 export const PlanStatusMeta: Record<string, { label: string; type: 'success' | 'warning' | 'info' | 'danger' | 'primary' }> = {
   planned: { label: '已计划', type: 'info' },

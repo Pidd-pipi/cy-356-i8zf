@@ -1,5 +1,6 @@
 import { get, post } from '@/utils/request'
 import type { UserInfo } from './auth'
+import type { PlotCustodian } from './plotCustodian'
 
 export interface Plot {
   id: number
@@ -13,6 +14,8 @@ export interface Plot {
   status: string
   adopter_id: number | null
   adopter: UserInfo | null
+  custodian?: PlotCustodian | null
+  latest_custodian?: PlotCustodian | null
   description: string
   created_at: string
 }

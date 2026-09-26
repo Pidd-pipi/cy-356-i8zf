@@ -188,6 +188,20 @@ func PostStatusText(s string) string {
 	}
 }
 
+// CustodianStatusText 地块共管邀请状态中文文本。
+func CustodianStatusText(s string) string {
+	switch constants.CustodianStatus(s) {
+	case constants.CustodianPending:
+		return "待接受"
+	case constants.CustodianAccepted:
+		return "共管中"
+	case constants.CustodianRemoved:
+		return "已移除"
+	default:
+		return "未知状态"
+	}
+}
+
 // WeightKgText 重量文本（kg 保留 2 位小数）。
 func WeightKgText(w float64) string {
 	return fmt.Sprintf("%.2f kg", w)

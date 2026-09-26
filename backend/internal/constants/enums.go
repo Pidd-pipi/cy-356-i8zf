@@ -118,6 +118,16 @@ const (
 	PostStatusRemoved   PostStatus = "removed"
 )
 
+// CustodianStatus 地块共管邀请状态机：pending -> accepted -> removed
+// （pending 也可直接 removed：认养人撤回邀请或共管人拒绝/退出）
+type CustodianStatus string
+
+const (
+	CustodianPending  CustodianStatus = "pending"  // 待接受
+	CustodianAccepted CustodianStatus = "accepted" // 已接受（共管中）
+	CustodianRemoved  CustodianStatus = "removed"  // 已移除/已撤回
+)
+
 // 季节推荐作物表（静态推荐数据，服务层读取）
 var SeasonCrops = map[Season][]string{
 	SeasonSpring: {"菠菜", "生菜", "豌豆", "草莓", "香葱", "萝卜"},

@@ -8,6 +8,7 @@ servers:
 tags:
   - name: auth
   - name: plots
+  - name: plot-custodians
   - name: planting-plans
   - name: harvests
   - name: diaries
@@ -52,7 +53,40 @@ paths:
   /plots/{id}/release:
     post:
       tags: [plots]
-      summary: 释放地块
+      summary: 释放地块（同步撤销全部有效共管）
+      responses: { '200': { description: 成功 } }
+  /plots/{id}/custodians/invite:
+    post:
+      tags: [plot-custodians]
+      summary: 认养人按用户名邀请一位注册用户共管地块
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username]
+              properties:
+                username: { type: string, example: citizen }
+      responses: { '200': { description: 成功 } }
+  /plots/{id}/custodians:
+    get:
+      tags: [plot-custodians]
+      summary: 地块共管历史（邀请/接受/移除记录，地块列表可见）
+      parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: 成功 } }
+  /plot-custodians/{custodianId}/accept:
+    post:
+      tags: [plot-custodians]
+      summary: 被邀请人接受共管（pending -> accepted，随后可为该地块计划写日记）
+      parameters: [{ name: custodianId, in: path, required: true, schema: { type: integer } }]
+      responses: { '200': { description: 成功 } }
+  /plot-custodians/{custodianId}/remove:
+    post:
+      tags: [plot-custodians]
+      summary: 认养人移除共管人，或被邀请人拒绝(pending)/共管人退出(accepted)；移除后新日记写不进去，历史日记保留
+      parameters: [{ name: custodianId, in: path, required: true, schema: { type: integer } }]
       responses: { '200': { description: 成功 } }
   /planting-plans:
     get:

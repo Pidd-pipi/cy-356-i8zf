@@ -16,14 +16,15 @@ import (
 
 // PlotService 地块服务（认养使用事务 + SELECT FOR UPDATE）。
 type PlotService struct {
-	plotRepo repository.PlotRepository
-	db       *gorm.DB
-	logger   *slog.Logger
+	plotRepo      repository.PlotRepository
+	custodianRepo repository.PlotCustodianRepository
+	db            *gorm.DB
+	logger        *slog.Logger
 }
 
 // NewPlotService 构造地块服务。
-func NewPlotService(plotRepo repository.PlotRepository, db *gorm.DB, logger *slog.Logger) *PlotService {
-	return &PlotService{plotRepo: plotRepo, db: db, logger: logger}
+func NewPlotService(plotRepo repository.PlotRepository, custodianRepo repository.PlotCustodianRepository, db *gorm.DB, logger *slog.Logger) *PlotService {
+	return &PlotService{plotRepo: plotRepo, custodianRepo: custodianRepo, db: db, logger: logger}
 }
 
 // GetByID 查询地块详情（被地块 handler 与种植计划 service 复用）。
@@ -160,6 +161,11 @@ func (s *PlotService) Release(plotID, operatorID uint, operatorRole string) (*mo
 		if err := s.plotRepo.UpdateWithTx(tx, plot); err != nil {
 			return util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
 		}
+		// 释放后原认养关系终止，一并撤销全部有效共管（pending/accepted）。
+		// 已写的日记数据保留；共管人随后无法再写入新日记。
+		if err := s.custodianRepo.RevokeAllByPlotWithTx(tx, plotID); err != nil {
+			return util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
+		}
 		released = plot
 		return nil
 	})
@@ -183,4 +189,22 @@ func (s *PlotService) MarkHarvested(tx *gorm.DB, plotID uint) error {
 // CountByStatus 地块状态统计（仪表盘复用）。
 func (s *PlotService) CountByStatus() (map[string]int64, error) {
 	return s.plotRepo.CountByStatus()
+}
+
+// CustodianOverview 批量查询地块的共管记录（地块列表 enrichment 复用）。
+func (s *PlotService) CustodianOverview(plotIDs []uint) (map[uint][]model.PlotCustodian, error) {
+	overview, err := s.custodianRepo.OverviewByPlotIDs(plotIDs)
+	if err != nil {
+		return nil, util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
+	}
+	return overview, nil
+}
+
+// CustodianHistory 查询单个地块的共管历史（地块详情/历史弹窗复用）。
+func (s *PlotService) CustodianHistory(plotID uint) ([]model.PlotCustodian, error) {
+	list, err := s.custodianRepo.ListByPlot(plotID)
+	if err != nil {
+		return nil, util.NewAppError(constants.CodeInternalError, 500, constants.ErrorText[constants.CodeInternalError]).Wrap(err)
+	}
+	return list, nil
 }

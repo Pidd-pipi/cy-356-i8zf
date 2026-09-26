@@ -22,6 +22,9 @@ const (
 	CodeDuplicateUsername    = 2007
 	CodeInvalidCredentials   = 2008
 	CodeUserDisabled         = 2009
+	CodeCustodianConflict    = 2010
+	CodeCustodianNotFound    = 2011
+	CodeCustodianNotAllowed  = 2012
 )
 
 // ErrorText 错误码默认文案（service/handler 可覆盖拼接更具体的 message）
@@ -44,4 +47,7 @@ var ErrorText = map[int]string{
 	CodeDuplicateUsername: "用户名已被占用",
 	CodeInvalidCredentials: "用户名或密码错误",
 	CodeUserDisabled:      "账号已被禁用",
+	CodeCustodianConflict: "地块共管邀请状态冲突",
+	CodeCustodianNotFound: "地块共管邀请不存在",
+	CodeCustodianNotAllowed: "当前角色无权执行地块共管操作",
 }

@@ -30,19 +30,21 @@ type UpdatePlotRequest struct {
 
 // PlotOutDTO 地块输出。
 type PlotOutDTO struct {
-	ID          uint        `json:"id"`
-	Name        string      `json:"name"`
-	Code        string      `json:"code"`
-	Area        float64     `json:"area"`
-	SoilType    string      `json:"soil_type"`
-	Sunlight    string      `json:"sunlight"`
-	Latitude    float64     `json:"latitude"`
-	Longitude   float64     `json:"longitude"`
-	Status      string      `json:"status"`
-	AdopterID   *uint       `json:"adopter_id"`
-	Adopter     *UserOutDTO `json:"adopter"`
-	Description string      `json:"description"`
-	CreatedAt   string      `json:"created_at"`
+	ID              uint                 `json:"id"`
+	Name            string               `json:"name"`
+	Code            string               `json:"code"`
+	Area            float64              `json:"area"`
+	SoilType        string               `json:"soil_type"`
+	Sunlight        string               `json:"sunlight"`
+	Latitude        float64              `json:"latitude"`
+	Longitude       float64              `json:"longitude"`
+	Status          string               `json:"status"`
+	AdopterID       *uint                `json:"adopter_id"`
+	Adopter         *UserOutDTO          `json:"adopter"`
+	Custodian       *PlotCustodianOutDTO `json:"custodian,omitempty"`
+	LatestCustodian *PlotCustodianOutDTO `json:"latest_custodian,omitempty"`
+	Description     string               `json:"description"`
+	CreatedAt       string               `json:"created_at"`
 }
 
 // ToPlotOutDTO 模型转 DTO。

@@ -70,9 +70,20 @@ func (h *PlotHandler) List(c *gin.Context) {
 		util.FailWithAppError(c, err)
 		return
 	}
+	plotIDs := make([]uint, 0, len(plots))
+	for i := range plots {
+		plotIDs = append(plotIDs, plots[i].ID)
+	}
+	overview, err := h.plotService.CustodianOverview(plotIDs)
+	if err != nil {
+		util.FailWithAppError(c, err)
+		return
+	}
 	list := make([]*dto.PlotOutDTO, 0, len(plots))
 	for i := range plots {
-		list = append(list, dto.ToPlotOutDTO(&plots[i]))
+		out := dto.ToPlotOutDTO(&plots[i])
+		out.AttachCustodians(overview[plots[i].ID])
+		list = append(list, out)
 	}
 	util.OK(c, util.PageResult{List: list, Total: total, Page: pq.Page, PageSize: pq.PageSize})
 }
@@ -89,7 +100,11 @@ func (h *PlotHandler) Get(c *gin.Context) {
 		util.FailWithAppError(c, err)
 		return
 	}
-	util.OK(c, dto.ToPlotOutDTO(p))
+	out := dto.ToPlotOutDTO(p)
+	if history, herr := h.plotService.CustodianHistory(uint(id)); herr == nil {
+		out.AttachCustodians(history)
+	}
+	util.OK(c, out)
 }
 
 // Adopt 认养地块（登录用户）。
@@ -107,7 +122,11 @@ func (h *PlotHandler) Adopt(c *gin.Context) {
 	}
 	_ = h.audit.Write(claims.UserID, claims.Username, claims.Role, "ADOPT_PLOT", "plot", strconv.FormatUint(uint64(id), 10),
 		"用户认养地块 "+p.Code, c.ClientIP(), util.GetRequestID(c))
-	util.OK(c, dto.ToPlotOutDTO(p))
+	out := dto.ToPlotOutDTO(p)
+	if history, herr := h.plotService.CustodianHistory(p.ID); herr == nil {
+		out.AttachCustodians(history)
+	}
+	util.OK(c, out)
 }
 
 // Release 释放地块（管理员或认养人）。
@@ -125,5 +144,9 @@ func (h *PlotHandler) Release(c *gin.Context) {
 	}
 	_ = h.audit.Write(claims.UserID, claims.Username, claims.Role, "RELEASE_PLOT", "plot", strconv.FormatUint(uint64(id), 10),
 		"释放地块 "+p.Code, c.ClientIP(), util.GetRequestID(c))
-	util.OK(c, dto.ToPlotOutDTO(p))
+	out := dto.ToPlotOutDTO(p)
+	if history, herr := h.plotService.CustodianHistory(p.ID); herr == nil {
+		out.AttachCustodians(history)
+	}
+	util.OK(c, out)
 }

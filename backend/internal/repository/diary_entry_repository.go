@@ -5,6 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/communitygarden/server/internal/constants"
 	"github.com/communitygarden/server/internal/model"
 	"github.com/communitygarden/server/internal/util"
 )
@@ -59,7 +60,16 @@ func (r *diaryRepository) List(pq util.PageQuery, userID, planID uint) ([]model.
 	var total int64
 	q := r.db.Model(&model.DiaryEntry{}).Preload("Plan").Preload("User")
 	if userID > 0 {
-		q = q.Where("user_id = ?", userID)
+		// 可见范围：本人写的日记 + 本人认养或 accepted 共管的地块上的全部日记。
+		// 共管人被移除后，其本人历史日记仍命中 user_id 条件而保留在列表中。
+		collabPlots := r.db.Model(&model.Plot{}).Distinct("id").
+			Where("id IN (?) OR id IN (?)",
+				r.db.Model(&model.Plot{}).Select("id").Where("adopter_id = ?", userID),
+				r.db.Model(&model.PlotCustodian{}).Select("plot_id").
+					Where("custodian_id = ? AND status = ?", userID, string(constants.CustodianAccepted)),
+			)
+		q = q.Where("user_id = ? OR plan_id IN (?)", userID,
+			r.db.Model(&model.PlantingPlan{}).Select("id").Where("plot_id IN (?)", collabPlots))
 	}
 	if planID > 0 {
 		q = q.Where("plan_id = ?", planID)

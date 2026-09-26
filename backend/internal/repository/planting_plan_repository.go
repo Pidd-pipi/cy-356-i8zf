@@ -5,6 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/communitygarden/server/internal/constants"
 	"github.com/communitygarden/server/internal/model"
 	"github.com/communitygarden/server/internal/util"
 )
@@ -66,7 +67,10 @@ func (r *plantingPlanRepository) List(pq util.PageQuery, userID uint, status str
 	var total int64
 	q := r.db.Model(&model.PlantingPlan{}).Preload("Plot").Preload("User")
 	if userID > 0 {
-		q = q.Where("user_id = ?", userID)
+		// 可见范围：本人的计划 + 本人 accepted 共管地块上的计划（共管人写日记时选择计划复用）。
+		q = q.Where("user_id = ? OR plot_id IN (?)", userID,
+			r.db.Model(&model.PlotCustodian{}).Select("plot_id").
+				Where("custodian_id = ? AND status = ?", userID, string(constants.CustodianAccepted)))
 	}
 	if status != "" {
 		q = q.Where("status = ?", status)

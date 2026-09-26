@@ -119,6 +119,24 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_plots_status ON plots(status);
+
+CREATE TABLE IF NOT EXISTS plot_custodians (
+    id BIGSERIAL PRIMARY KEY,
+    plot_id BIGINT NOT NULL REFERENCES plots(id),
+    custodian_id BIGINT NOT NULL REFERENCES users(id),
+    inviter_id BIGINT NOT NULL REFERENCES users(id),
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    invited_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    accepted_at TIMESTAMPTZ,
+    removed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_plot_custodians_plot ON plot_custodians(plot_id);
+CREATE INDEX IF NOT EXISTS idx_plot_custodians_custodian ON plot_custodians(custodian_id);
+CREATE INDEX IF NOT EXISTS idx_plot_custodians_status ON plot_custodians(status);
+
 CREATE INDEX IF NOT EXISTS idx_plans_user ON planting_plans(user_id);
 CREATE INDEX IF NOT EXISTS idx_plans_status ON planting_plans(status);
 CREATE INDEX IF NOT EXISTS idx_harvest_user ON harvest_records(user_id);

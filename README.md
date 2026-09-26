@@ -29,6 +29,7 @@ docker compose up -d --build
 ## ✨ 主要功能
 
 1. **地块认养与 GIS 展示**：地图展示地块分布，标注空闲/已认养/待释放状态，展示面积、土壤类型、日照条件，在线认养。
+   - **地块共管**：认养人可按用户名邀请一位注册用户共管同一地块；对方接受后可帮该地块下的种植计划写种植日记。邀请/接受/移除记录均在地块列表的「共管」列与「记录」时间线可见。共管人不能认养、释放或转交地块；被移除后无法再写新日记，已写日记仍保留在日记列表。释放地块会同步撤销全部有效共管。
 2. **种植计划与作物推荐**：认养后制定种植计划，按季节推荐适宜作物，生成预期收获时间线（蔬菜 45 天/水果 90 天/香草 35 天）。
 3. **种植日记图文记录**：按播种/浇水/施肥/除虫/收成记录种植过程，支持点赞与评论。
 4. **收成预警与采摘提醒**：近 7 天成熟作物自动提醒，记录采摘重量与品质，生成年度收成统计报表。
@@ -98,6 +99,7 @@ README.md
 | --- | --- | --- | --- |
 | 用户 User | `users` | `model/user.go`、`repository/user_repository.go`、`service/user_service.go`、`handler/user_handler.go`、`router/user.go` | `api/auth.ts`、`stores/auth.ts`、`pages/Login.vue`、`pages/Register.vue` |
 | 地块 Plot | `plots` | `model/plot.go`、`repository/plot_repository.go`、`service/plot_service.go`、`handler/plot_handler.go`、`router/plot.go` | `api/plot.ts`、`stores/plot.ts`、`pages/PlotMap.vue` |
+| 地块共管 PlotCustodian | `plot_custodians` | `model/plot_custodian.go`、`repository/plot_custodian_repository.go`、`service/plot_custodian_service.go`、`handler/plot_custodian_handler.go`、`router/plot_custodian.go` | `api/plotCustodian.ts`、`stores/plotCustodian.ts`、`pages/PlotMap.vue`（共管列+邀请/接受/移除/记录弹窗） |
 | 种植计划 PlantingPlan | `planting_plans` | `model/planting_plan.go`、`repository/planting_plan_repository.go`、`service/planting_plan_service.go`、`handler/planting_plan_handler.go`、`router/planting_plan.go` | `api/plantingPlan.ts`、`stores/plantingPlan.ts`、`pages/PlantingPlan.vue` |
 | 收成记录 HarvestRecord | `harvest_records` | `model/harvest_record.go`、`repository/harvest_record_repository.go`、`service/harvest_record_service.go`、`handler/harvest_handler.go`、`router/harvest.go` | `api/harvest.ts`、`pages/Harvest.vue` |
 | 种植日记 DiaryEntry | `diary_entries` / `diary_comments` | `model/diary_entry.go`、`repository/diary_entry_repository.go`、`service/diary_service.go`、`handler/diary_handler.go`、`router/diary.go` | `api/diary.ts`、`stores/diary.ts`、`pages/Diary.vue` |
@@ -117,6 +119,7 @@ README.md
 | --- | --- | --- |
 | RoleType 角色 | admin / farmer / citizen | `constants/enums.go`、`model/user.go`、`dto/user_dto.go`、`service/user_service.go`（ChangeRole 校验）、`middleware/rbac.go`、`middleware/audit.go`、`handler/planting_plan_handler.go`、`handler/harvest_handler.go`、`handler/diary_handler.go`、`util/formatters.go`、`log_templates.go`、`error_codes.go`、`database/database.go`（种子数据） |
 | PlotStatus 地块状态 | available / adopted / harvested | `constants/enums.go`、`model/plot.go`、`dto/plot_dto.go`、`service/plot_service.go`（认养/释放状态机）、`repository/plot_repository.go`（过滤）、`util/formatters.go`、`log_templates.go`、`database/database.go`（种子数据）、`api/openapi.yaml` |
+| CustodianStatus 地块共管状态 | pending / accepted / removed | `constants/enums.go`、`model/plot_custodian.go`、`dto/plot_custodian_dto.go`、`service/plot_custodian_service.go`（邀请/接受/移除状态机，事务 + FOR UPDATE）、`repository/plot_custodian_repository.go`（过滤/批量撤销）、`service/diary_service.go`（accepted 才能写日记）、`service/plot_service.go`（释放时撤销）、`handler/plot_custodian_handler.go`、`util/formatters.go`、`log_templates.go`、`error_codes.go`（CodeCustodianConflict/NotFound/NotAllowed）、`database/database.go`（AutoMigrate）、`database/init.sql`、`api/openapi.yaml`、前端 `constants/index.ts`（CustodianStatusMeta + 按钮显隐）、`pages/PlotMap.vue` |
 | PlanStatus 种植计划状态 | planned / planting / growing / harvesting / completed | `constants/enums.go`、`model/planting_plan.go`、`dto/planting_plan_dto.go`（oneof 校验）、`service/planting_plan_service.go`（PlanStatusTransitions 状态机）、`handler/planting_plan_handler.go`、`util/formatters.go`、`log_templates.go`、`error_codes.go`（CodePlanStateNotAllowed）、`database/database.go`（种子数据）、前端 `constants/index.ts`（PlanStatusMeta / PlanStatusNext 按钮显隐） |
 | CropType 作物类型 | vegetable / fruit / herb | `constants/enums.go`、`model/planting_plan.go`、`dto/planting_plan_dto.go`、`service/planting_plan_service.go`（成熟时间估算）、`util/formatters.go`、`repository/harvest_record_repository.go`（分组统计）、`database/database.go` |
 | Season 季节 | spring / summer / autumn / winter | `constants/enums.go`、`dto/planting_plan_dto.go`、`service/planting_plan_service.go`（SeasonCrops 推荐表）、`util/formatters.go`、`database/database.go`、前端 `pages/PlantingPlan.vue`、`pages/Dashboard.vue` |
@@ -152,7 +155,15 @@ README.md
 | POST | `/plots` | 创建地块 | 管理员 |
 | PUT | `/plots/:id` | 更新地块 | 管理员 |
 | POST | `/plots/:id/adopt` | 认养地块（事务 + FOR UPDATE） | 登录 |
-| POST | `/plots/:id/release` | 释放地块 | 认养人/管理员 |
+| POST | `/plots/:id/release` | 释放地块（同步撤销全部有效共管） | 认养人/管理员 |
+
+### 地块共管
+| 方法 | 路径 | 说明 | 鉴权 |
+| --- | --- | --- | --- |
+| POST | `/plots/:id/custodians/invite` | 认养人按用户名邀请一位注册用户（事务 + FOR UPDATE，同一地块仅一位有效共管人） | 认养人 |
+| GET | `/plots/:id/custodians` | 地块共管历史（邀请/接受/移除记录） | 登录 |
+| POST | `/plot-custodians/:custodianId/accept` | 被邀请人接受邀请（pending → accepted） | 被邀请人 |
+| POST | `/plot-custodians/:custodianId/remove` | 认养人移除共管人 / 被邀请人拒绝 / 共管人退出（→ removed，移除后新日记写不进去，历史保留） | 认养人/共管人 |
 
 ### 种植计划
 | 方法 | 路径 | 说明 | 鉴权 |
@@ -207,6 +218,8 @@ README.md
 - `GET /stats/annual`（收成统计接口）与 `GET /planting-plans/stats`（种植计划统计）**复用同一个 service 方法** `HarvestRecordService.AnnualStats`。
 - `GET /plots/:id`（地块详情接口）与创建种植计划 `POST /planting-plans` **复用同一个 service 方法** `PlotService.GetByID`。
 - 分页 `util.Paginate` 被全部 repository 复用；`ListByUser` 系列仓储方法被计划/收成列表接口复用。
+- 地块列表 `GET /plots` 与地块详情 `GET /plots/:id` 的共管信息 enrichment **复用同一个 service 方法族** `PlotService.CustodianOverview` / `CustodianHistory`（底层复用 `PlotCustodianRepository.OverviewByPlotIDs` / `ListByPlot`）。
+- 日记写权限校验 `DiaryService.Create` 与地块释放 `PlotService.Release` **复用同一个共管仓储方法族** `FindAcceptedByPlot` / `RevokeAllByPlotWithTx`。
 
 ## 🔌 API 调用示例（curl，含 JWT 请求头）
 
@@ -224,6 +237,23 @@ curl -s http://localhost:29516/api/v1/plots
 
 # 4. 认养地块（登录用户）
 curl -s -X POST http://localhost:29516/api/v1/plots/1/adopt \
+  -H "Authorization: Bearer $TOKEN"
+
+# 4.1 认养人邀请注册用户 citizen 共管地块
+curl -s -X POST http://localhost:29516/api/v1/plots/1/custodians/invite \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"username":"citizen"}'
+
+# 4.2 被邀请人（citizen 登录）接受邀请，custodianId 用上一步返回的 data.id
+curl -s -X POST http://localhost:29516/api/v1/plot-custodians/1/accept \
+  -H "Authorization: Bearer $NEIGHBOR_TOKEN"
+
+# 4.3 接受后即可为该地块的种植计划代写日记；认养人移除共管后新日记会被 403 拒绝
+curl -s -X POST http://localhost:29516/api/v1/plot-custodians/1/remove \
+  -H "Authorization: Bearer $TOKEN"
+
+# 4.4 查看地块共管历史（邀请/接受/移除全部留痕）
+curl -s http://localhost:29516/api/v1/plots/1/custodians \
   -H "Authorization: Bearer $TOKEN"
 
 # 5. 创建种植计划
@@ -273,7 +303,7 @@ npm run dev                # http://localhost:5173，/api 代理到 29516
 cd backend
 go build ./...
 go vet ./...
-go test ./...              # service 与 repository 表驱动单元测试
+go test ./...              # service/repository 表驱动单元测试；test/integration 为 HTTP 端到端测试（共管邀请→接受→代写日记→移除失效→历史保留）
 ```
 
 ## 📄 License
